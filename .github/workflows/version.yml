@@ -1,0 +1,45 @@
+name: Update Version on Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Extract and Update Version
+        run: |
+          import re
+          import os
+
+          tag_ref = os.environ['GITHUB_REF']
+          tag_version = re.findall(r'v(\d+\.\d+\.\d+\.\d+)', tag_ref)
+
+          if not tag_version:
+              raise ValueError("Invalid tag version format")
+
+          version_code = tag_version[0].split('.')[-1]
+          version_name = '.'.join(tag_version[0].split('.')[:-1])
+
+          with open('version.properties', 'w') as file:
+              file.write(f"flutter.versionCode={version_code}\n")
+              file.write(f"flutter.versionName={version_name}\n")
+
+        shell: python
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name 'Your GitHub Username'
+          git config --global user.email 'your-email@example.com'
+          git add version.properties
+          git commit -m "Update version to ${GITHUB_REF##*/}"
+          git push
